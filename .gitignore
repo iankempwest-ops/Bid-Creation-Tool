@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+env/
+.venv/
+
+# Data files (database + generated PDFs)
+data/bid_tool.db
+data/pdfs/
+data/uploads/
+
+# Keep template
+!data/templates/
+!data/templates/*.xlsx
+
+# Environment
+.env
+*.env
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db

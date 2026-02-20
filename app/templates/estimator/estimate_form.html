@@ -1,0 +1,308 @@
+{% extends "base.html" %}
+{% block title %}Estimate — Lead #{{ lead.id }} — {{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>Estimate — Lead #{{ lead.id }}</h1>
+    <p class="page-subtitle">{{ customer.name }}</p>
+  </div>
+  <div class="header-actions">
+    <a href="{{ url_for('estimator.leads_list') }}" class="btn btn-ghost">&larr; Queue</a>
+  </div>
+</div>
+
+{# ── Status + Download Row ──────────────────────────── #}
+<div class="status-bar">
+  <div class="status-left">
+    <span class="label">Status:</span>
+    <span class="badge badge-{{ lead.status | lower | replace(' ', '-') }}">{{ lead.status }}</span>
+  </div>
+  {% if estimate and estimate.files %}
+    <div class="status-right">
+      {% for f in estimate.files | sort(attribute='created_at', reverse=True) %}
+        <a href="{{ url_for('estimator.download_pdf', file_id=f.id) }}"
+           class="btn btn-success btn-sm">
+          &#8659; Download PDF
+          <span class="sub-text">({{ f.created_at.strftime('%m/%d %H:%M') }})</span>
+        </a>
+      {% endfor %}
+    </div>
+  {% endif %}
+</div>
+
+{# ── Lead Summary (read-only) ──────────────────────── #}
+<section class="form-section form-section-info">
+  <h2 class="section-title">Lead Information</h2>
+  <div class="info-grid">
+    <div class="info-pair">
+      <span class="info-label">Customer</span>
+      <span class="info-value">{{ customer.name }}</span>
+    </div>
+    <div class="info-pair">
+      <span class="info-label">Contact</span>
+      <span class="info-value">{{ customer.primary_contact_name or '—' }}</span>
+    </div>
+    <div class="info-pair">
+      <span class="info-label">Phone</span>
+      <span class="info-value">{{ customer.phone or '—' }}</span>
+    </div>
+    <div class="info-pair">
+      <span class="info-label">Email</span>
+      <span class="info-value">{{ customer.email or '—' }}</span>
+    </div>
+    <div class="info-pair">
+      <span class="info-label">Billing Address</span>
+      <span class="info-value">
+        {{ customer.billing_street or '' }}<br>
+        {{ customer.billing_city or '' }}{% if customer.billing_state %}, {{ customer.billing_state }}{% endif %}
+        {{ customer.billing_zip or '' }}
+      </span>
+    </div>
+    <div class="info-pair">
+      <span class="info-label">Project Location</span>
+      <span class="info-value">
+        {{ lead.project_street or '' }}<br>
+        {{ lead.project_city or '' }}{% if lead.project_state %}, {{ lead.project_state }}{% endif %}
+        {{ lead.project_zip or '' }}
+      </span>
+    </div>
+    <div class="info-pair info-pair-full">
+      <span class="info-label">Project Specs</span>
+      <span class="info-value spec-text">{{ lead.specs or '—' }}</span>
+    </div>
+  </div>
+</section>
+
+{# ── Estimate Form ─────────────────────────────────── #}
+<form method="post" id="estimate-form">
+
+  {# Section A: Crew Package #}
+  <section class="form-section">
+    <h2 class="section-title">Section A — Crew Package</h2>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="crew_package_key">Crew Package <span class="req">*</span></label>
+        <select id="crew_package_key" name="crew_package_key" class="input-select" required>
+          <option value="">— Select Package —</option>
+          {% for key, pkg in crew_rates.items() %}
+            <option value="{{ key }}"
+              {% if estimate and estimate.crew_package_key == key %}selected
+              {% elif form_data.get('crew_package_key') == key %}selected
+              {% endif %}>
+              {{ pkg.label }}
+            </option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group form-group-narrow">
+        <label for="crew_hours">Crew Hours <span class="req">*</span></label>
+        <input type="number" id="crew_hours" name="crew_hours"
+               value="{{ estimate.crew_hours if estimate else form_data.get('crew_hours', '') }}"
+               min="0.5" step="0.5" class="input-text input-number" required>
+      </div>
+      <div class="form-group form-group-narrow">
+        <label for="margin_pct">Margin % <span class="req">*</span></label>
+        <input type="number" id="margin_pct" name="margin_pct"
+               value="{{ estimate.margin_pct if estimate else form_data.get('margin_pct', '') }}"
+               min="0.1" max="99.9" step="0.1" class="input-text input-number" required>
+      </div>
+      <div class="form-group form-group-narrow">
+        <label>Crew Rate / Hr</label>
+        <div id="crew-rate-display" class="calc-display">—</div>
+      </div>
+    </div>
+
+    {# Live calculation display — read-only for estimator reference #}
+    <div class="calc-summary">
+      <div class="calc-row">
+        <span class="calc-label">Internal Cost:</span>
+        <span class="calc-value" id="calc-internal">$0.00</span>
+      </div>
+      <div class="calc-row calc-row-bid">
+        <span class="calc-label">Crew Bid Amount:</span>
+        <span class="calc-value calc-value-bid" id="calc-crew-bid">$0.00</span>
+      </div>
+    </div>
+  </section>
+
+  {# Section B: Specialty Equipment #}
+  <section class="form-section">
+    <h2 class="section-title">Specialty Equipment <span class="section-optional">(Optional)</span></h2>
+
+    <div id="equipment-table-wrap">
+      <table class="equip-table" id="equipment-table">
+        <thead>
+          <tr>
+            <th>Equipment</th>
+            <th>Hours</th>
+            <th>Rate / Hr</th>
+            <th>Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="equipment-tbody">
+          {% set existing_items = estimate.equipment_items if estimate else [] %}
+          {% for item in existing_items %}
+          <tr class="equip-row">
+            <td>
+              <select name="equip_key[]" class="input-select equip-key" required>
+                <option value="">— Select —</option>
+                {% for key, eq in equipment_rates.items() %}
+                  <option value="{{ key }}"
+                    data-rate="{{ eq.rate }}"
+                    {% if item.equipment_key == key %}selected{% endif %}>
+                    {{ eq.label }}
+                  </option>
+                {% endfor %}
+              </select>
+            </td>
+            <td>
+              <input type="number" name="equip_hours[]" class="input-text input-number equip-hours"
+                     value="{{ item.hours }}" min="0.5" step="0.5">
+            </td>
+            <td>
+              <input type="number" name="equip_rate[]" class="input-text input-number equip-rate"
+                     value="{{ item.rate }}" step="0.01" readonly>
+            </td>
+            <td>
+              <span class="equip-total">${{ '{:,.2f}'.format(item.total) }}</span>
+              <input type="hidden" name="equip_total[]" class="equip-total-hidden" value="{{ item.total }}">
+            </td>
+            <td>
+              <button type="button" class="btn btn-sm btn-danger equip-remove">Remove</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <button type="button" id="add-equipment-btn" class="btn btn-secondary btn-sm">+ Add Equipment</button>
+
+    {# Equipment total display #}
+    <div class="equip-total-row">
+      <span>Equipment Total:</span>
+      <span id="equip-total-display">$0.00</span>
+    </div>
+  </section>
+
+  {# Section C: Totals #}
+  <section class="form-section form-section-totals">
+    <h2 class="section-title">Bid Summary</h2>
+
+    <div class="totals-grid">
+      <div class="total-row">
+        <span>Subtotal (Crew + Equipment):</span>
+        <span id="total-subtotal">$0.00</span>
+      </div>
+      <div class="total-row">
+        <span>WA Sales Tax <span id="tax-rate-label" class="text-muted"></span>:</span>
+        <span id="total-tax">$0.00</span>
+      </div>
+      <div class="total-row total-row-grand">
+        <span>Total:</span>
+        <span id="total-grand">$0.00</span>
+      </div>
+    </div>
+
+    {% if estimate and estimate.tax_code %}
+    <div class="tax-info">
+      <span class="text-muted">Tax Location Code: {{ estimate.tax_code }}</span>
+      {% if estimate.tax_rate %}
+        &nbsp;|&nbsp;
+        <span class="text-muted">Rate: {{ '{:.1f}%'.format(estimate.tax_rate * 100) }}</span>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group form-group-wide">
+        <label for="estimator_notes">Estimator Notes <span class="req-note">(internal only)</span></label>
+        <textarea id="estimator_notes" name="estimator_notes" rows="3" class="input-textarea"
+                  placeholder="Notes for internal reference only…">{{ estimate.estimator_notes if estimate else '' }}</textarea>
+      </div>
+    </div>
+  </section>
+
+  {# ── Status Update ─────────────────────────────────── #}
+  {% if estimate %}
+  <section class="form-section form-section-status">
+    <h2 class="section-title">Update Status</h2>
+    <div class="form-row">
+      <div class="form-group">
+        <select name="new_status" class="input-select">
+          {% for s in ['Ready for Estimate', 'Bid Generated', 'Sent', 'Won', 'Lost'] %}
+            <option value="{{ s }}" {% if lead.status == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <button type="submit" name="action" value="status" class="btn btn-secondary">Update Status</button>
+    </div>
+  </section>
+  {% endif %}
+
+  {# ── Actions ──────────────────────────────────────── #}
+  <div class="form-actions">
+    <button type="submit" name="action" value="save" class="btn btn-primary">
+      Save Estimate
+    </button>
+    <button type="submit" name="action" value="generate" class="btn btn-success"
+            onclick="return confirmGenerate()">
+      Generate PDF
+    </button>
+    <a href="{{ url_for('estimator.leads_list') }}" class="btn btn-ghost">Cancel</a>
+  </div>
+
+</form>
+
+{# Template row for JS cloning #}
+<template id="equip-row-template">
+  <tr class="equip-row">
+    <td>
+      <select name="equip_key[]" class="input-select equip-key" required>
+        <option value="">— Select —</option>
+        {% for key, eq in equipment_rates.items() %}
+          <option value="{{ key }}" data-rate="{{ eq.rate }}">{{ eq.label }}</option>
+        {% endfor %}
+      </select>
+    </td>
+    <td>
+      <input type="number" name="equip_hours[]" class="input-text input-number equip-hours"
+             value="" min="0.5" step="0.5" placeholder="hrs">
+    </td>
+    <td>
+      <input type="number" name="equip_rate[]" class="input-text input-number equip-rate"
+             value="" step="0.01" readonly>
+    </td>
+    <td>
+      <span class="equip-total">$0.00</span>
+      <input type="hidden" name="equip_total[]" class="equip-total-hidden" value="0">
+    </td>
+    <td>
+      <button type="button" class="btn btn-sm btn-danger equip-remove">Remove</button>
+    </td>
+  </tr>
+</template>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  const CREW_RATES = {{ crew_rates | tojson }};
+  const ESTIMATE_DATA = {
+    crew_package_key: "{{ estimate.crew_package_key if estimate else '' }}",
+    crew_hours: {{ estimate.crew_hours if estimate and estimate.crew_hours else 0 }},
+    margin_pct: {{ estimate.margin_pct if estimate and estimate.margin_pct else 0 }},
+    equipment_total: {{ estimate.equipment_total if estimate and estimate.equipment_total else 0 }},
+    subtotal: {{ estimate.subtotal if estimate and estimate.subtotal else 0 }},
+    tax_rate: {{ estimate.tax_rate if estimate and estimate.tax_rate else 0 }},
+    tax_amount: {{ estimate.tax_amount if estimate and estimate.tax_amount else 0 }},
+    total: {{ estimate.total if estimate and estimate.total else 0 }},
+  };
+</script>
+<script src="{{ url_for('static', filename='js/estimator.js') }}"></script>
+{% endblock %}

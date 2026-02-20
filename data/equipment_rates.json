@@ -1,0 +1,52 @@
+{
+  "equipment": {
+    "chipper_6in": {
+      "label": "6\" Chipper",
+      "rate": 45.00
+    },
+    "chipper_12in": {
+      "label": "12\" Chipper",
+      "rate": 75.00
+    },
+    "bucket_truck_55ft": {
+      "label": "55' Bucket Truck",
+      "rate": 185.00
+    },
+    "bucket_truck_75ft": {
+      "label": "75' Bucket Truck",
+      "rate": 225.00
+    },
+    "crane_30ton": {
+      "label": "30 Ton Crane",
+      "rate": 350.00
+    },
+    "stump_grinder": {
+      "label": "Stump Grinder",
+      "rate": 95.00
+    },
+    "mini_excavator": {
+      "label": "Mini Excavator",
+      "rate": 145.00
+    },
+    "log_truck": {
+      "label": "Log Truck",
+      "rate": 165.00
+    },
+    "dump_trailer": {
+      "label": "Dump Trailer",
+      "rate": 55.00
+    },
+    "skid_steer": {
+      "label": "Skid Steer",
+      "rate": 120.00
+    },
+    "aerial_lift": {
+      "label": "Aerial Lift",
+      "rate": 195.00
+    },
+    "grapple_saw": {
+      "label": "Grapple Saw",
+      "rate": 275.00
+    }
+  }
+}

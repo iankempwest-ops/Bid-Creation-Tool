@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+{% block title %}{% if lead %}Edit Lead #{{ lead.id }}{% else %}New Lead{% endif %}{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1>{% if lead %}Edit Lead #{{ lead.id }}{% else %}New Lead{% endif %}</h1>
+    <p class="page-subtitle">Admin / Intake</p>
+  </div>
+  <a href="{{ url_for('admin.leads_list') }}" class="btn btn-ghost">&larr; Back to Leads</a>
+</div>
+
+{% if lead %}
+<div class="status-bar">
+  <span class="label">Status:</span>
+  <span class="badge badge-{{ lead.status | lower | replace(' ', '-') }}">{{ lead.status }}</span>
+</div>
+{% endif %}
+
+<form method="post" id="lead-form" novalidate>
+
+  {# ── CUSTOMER SECTION ──────────────────────────────── #}
+  <section class="form-section">
+    <h2 class="section-title">Customer</h2>
+
+    {% if lead %}
+      <input type="hidden" name="customer_id" value="{{ lead.customer.id }}">
+    {% else %}
+      <input type="hidden" name="customer_id" id="customer_id" value="">
+    {% endif %}
+
+    <div class="form-row">
+      <div class="form-group form-group-wide">
+        <label for="customer_name">Customer Name <span class="req">*</span></label>
+        <div class="autocomplete-wrap">
+          <input type="text" id="customer_name" name="customer_name"
+                 value="{{ form_data.get('customer_name', '') }}"
+                 placeholder="Start typing to search or create new…"
+                 autocomplete="off" class="input-text" required minlength="2">
+          <div id="customer-suggestions" class="suggestions-dropdown hidden"></div>
+        </div>
+        {% if not lead %}
+          <div id="existing-customer-notice" class="notice-info hidden">
+            <span id="existing-customer-msg"></span>
+            <label class="checkbox-label">
+              <input type="checkbox" name="update_customer" value="1" id="update_customer_cb">
+              Update saved customer defaults
+            </label>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="contact_name">Contact Name</label>
+        <input type="text" id="contact_name" name="contact_name"
+               value="{{ form_data.get('contact_name', '') }}"
+               class="input-text">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="phone">Phone <span class="req-note">(Phone or Email required)</span></label>
+        <input type="tel" id="phone" name="phone"
+               value="{{ form_data.get('phone', '') }}"
+               placeholder="(###) ###-####"
+               class="input-text">
+        <div class="field-error" id="phone-error"></div>
+      </div>
+      <div class="form-group">
+        <label for="email">Email <span class="req-note">(Phone or Email required)</span></label>
+        <input type="email" id="email" name="email"
+               value="{{ form_data.get('email', '') }}"
+               class="input-text">
+        <div class="field-error" id="email-error"></div>
+      </div>
+    </div>
+
+    <fieldset class="address-fieldset">
+      <legend>Billing Address</legend>
+      <div class="form-row">
+        <div class="form-group form-group-wide">
+          <label for="billing_street">Street <span class="req">*</span></label>
+          <input type="text" id="billing_street" name="billing_street"
+                 value="{{ form_data.get('billing_street', '') }}"
+                 class="input-text" required>
+        </div>
+      </div>
+      <div class="form-row form-row-3col">
+        <div class="form-group">
+          <label for="billing_city">City <span class="req">*</span></label>
+          <input type="text" id="billing_city" name="billing_city"
+                 value="{{ form_data.get('billing_city', '') }}"
+                 class="input-text" required>
+        </div>
+        <div class="form-group form-group-state">
+          <label for="billing_state">State <span class="req">*</span></label>
+          <input type="text" id="billing_state" name="billing_state"
+                 value="{{ form_data.get('billing_state', '') }}"
+                 maxlength="2" placeholder="WA" class="input-text input-state" required>
+        </div>
+        <div class="form-group form-group-zip">
+          <label for="billing_zip">ZIP <span class="req">*</span></label>
+          <input type="text" id="billing_zip" name="billing_zip"
+                 value="{{ form_data.get('billing_zip', '') }}"
+                 maxlength="5" placeholder="98001" class="input-text input-zip" required>
+        </div>
+      </div>
+    </fieldset>
+
+    {% if lead %}
+      <div class="form-row">
+        <label class="checkbox-label">
+          <input type="checkbox" name="update_customer" value="1">
+          Update saved customer defaults
+        </label>
+      </div>
+    {% endif %}
+  </section>
+
+  {# ── PROJECT SECTION ───────────────────────────────── #}
+  <section class="form-section">
+    <h2 class="section-title">Project</h2>
+
+    <fieldset class="address-fieldset">
+      <legend>Project Location</legend>
+      <div class="form-row">
+        <div class="form-group form-group-wide">
+          <label for="project_street">Street <span class="req">*</span></label>
+          <input type="text" id="project_street" name="project_street"
+                 value="{{ form_data.get('project_street', '') }}"
+                 class="input-text" required>
+        </div>
+      </div>
+      <div class="form-row form-row-3col">
+        <div class="form-group">
+          <label for="project_city">City <span class="req">*</span></label>
+          <input type="text" id="project_city" name="project_city"
+                 value="{{ form_data.get('project_city', '') }}"
+                 class="input-text" required>
+        </div>
+        <div class="form-group form-group-state">
+          <label for="project_state">State <span class="req">*</span></label>
+          <input type="text" id="project_state" name="project_state"
+                 value="{{ form_data.get('project_state', 'WA') }}"
+                 maxlength="2" placeholder="WA" class="input-text input-state" required>
+        </div>
+        <div class="form-group form-group-zip">
+          <label for="project_zip">ZIP <span class="req">*</span></label>
+          <input type="text" id="project_zip" name="project_zip"
+                 value="{{ form_data.get('project_zip', '') }}"
+                 maxlength="5" placeholder="98001" class="input-text input-zip" required>
+        </div>
+      </div>
+    </fieldset>
+
+    <div class="form-row">
+      <div class="form-group form-group-wide">
+        <label for="specs">Project Specifications <span class="req">*</span> <span class="req-note">(min 10 characters)</span></label>
+        <textarea id="specs" name="specs" rows="5"
+                  class="input-textarea" required minlength="10"
+                  placeholder="Describe the scope of work in detail…">{{ form_data.get('specs', '') }}</textarea>
+        <div class="char-count"><span id="specs-count">{{ form_data.get('specs', '') | length }}</span> chars</div>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="date_received">Date</label>
+        <input type="date" id="date_received" name="date_received"
+               value="{{ form_data.get('date_received', today) }}"
+               class="input-text input-date">
+      </div>
+      <div class="form-group">
+        <label for="created_by">Entered By</label>
+        <input type="text" id="created_by" name="created_by"
+               value="{{ form_data.get('created_by', '') }}"
+               class="input-text" placeholder="Your name">
+      </div>
+    </div>
+
+    {% if lead %}
+    <div class="form-row">
+      <div class="form-group form-group-wide">
+        <label for="notes">Internal Notes</label>
+        <textarea id="notes" name="notes" rows="3"
+                  class="input-textarea"
+                  placeholder="Internal notes (not shown on bid)…">{{ form_data.get('notes', '') }}</textarea>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label for="status">Status</label>
+        <select id="status" name="status" class="input-select">
+          {% for s in ['New Lead', 'Needs Info', 'Ready for Estimate'] %}
+            <option value="{{ s }}" {% if form_data.get('status') == s %}selected{% endif %}>{{ s }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    {% endif %}
+  </section>
+
+  {# ── ACTIONS ───────────────────────────────────────── #}
+  <div class="form-actions">
+    {% if lead %}
+      <button type="submit" name="action" value="save" class="btn btn-primary">Save Changes</button>
+      {% if lead.status != 'Ready for Estimate' and lead.status != 'Bid Generated' and lead.status != 'Sent' and lead.status != 'Won' and lead.status != 'Lost' %}
+        <button type="submit" name="action" value="ready" class="btn btn-success"
+                onclick="return confirm('Mark this lead Ready for Estimate?')">
+          Mark Ready for Estimate
+        </button>
+      {% endif %}
+    {% else %}
+      <button type="submit" name="action" value="save" class="btn btn-primary">Create Lead</button>
+    {% endif %}
+    <a href="{{ url_for('admin.leads_list') }}" class="btn btn-ghost">Cancel</a>
+  </div>
+
+</form>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

@@ -1,0 +1,52 @@
+{
+  "packages": {
+    "lc_3man_4step": {
+      "label": "Line Clearance 3 man crew (4th step)",
+      "rate": 450.00
+    },
+    "lc_4man": {
+      "label": "Line Clearance 4 man crew",
+      "rate": 580.00
+    },
+    "dt_lc_3man": {
+      "label": "DT Line Clearance 3 man crew",
+      "rate": 495.00
+    },
+    "dt_lc_4man": {
+      "label": "DT Line Clearance 4 man crew",
+      "rate": 635.00
+    },
+    "op_1man": {
+      "label": "1 man Operator crew",
+      "rate": 185.00
+    },
+    "op_2man": {
+      "label": "2 man Operator crew",
+      "rate": 310.00
+    },
+    "dt_op_1man": {
+      "label": "DT 1 man Operator",
+      "rate": 205.00
+    },
+    "dt_op_2man": {
+      "label": "DT 2 man Operator",
+      "rate": 340.00
+    },
+    "fb_3man": {
+      "label": "Faller bucker 3 man crew",
+      "rate": 420.00
+    },
+    "fb_4man": {
+      "label": "Faller bucker 4 man crew",
+      "rate": 545.00
+    },
+    "dt_fb_3man": {
+      "label": "DT Faller bucker 3 man crew",
+      "rate": 465.00
+    },
+    "dt_fb_4man": {
+      "label": "DT Faller bucker 4 man crew",
+      "rate": 595.00
+    }
+  }
+}
